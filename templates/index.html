@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ config.NOMBRE_ESPACIO }} | Sistema de Control de Acceso Facial</title>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- Estilos Custom -->
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+  <!-- ==========================================================
+       SIDEBAR DE NAVEGACIÓN
+       ========================================================== -->
+  <aside class="sidebar">
+    <div class="brand-header">
+      <div class="brand-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M7 3H5a2 2 0 0 0-2 2v2M17 3h2a2 2 0 0 1 2 2v2M7 21H5a2 2 0 0 1-2-2v-2M17 21h2a2 2 0 0 0 2-2v-2"/>
+          <circle cx="12" cy="11" r="3"/>
+          <path d="M12 17c-2.5 0-4.5-1-4.5-2.5"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-title">{{ config.NOMBRE_ESPACIO }}</div>
+        <div class="brand-subtitle">Reconocimiento Facial</div>
+      </div>
+    </div>
+
+    <nav class="nav-menu">
+      <div class="nav-section-title">Control en Vivo</div>
+      
+      <a class="nav-item active" data-view="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7"></rect>
+          <rect x="14" y="3" width="7" height="7"></rect>
+          <rect x="14" y="14" width="7" height="7"></rect>
+          <rect x="3" y="14" width="7" height="7"></rect>
+        </svg>
+        <span>Dashboard General</span>
+      </a>
+
+      <a class="nav-item" data-view="kiosco">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+          <circle cx="12" cy="13" r="4"></circle>
+        </svg>
+        <span>Kiosco Facial</span>
+        <span class="badge-live">EN VIVO</span>
+      </a>
+
+      <div class="nav-section-title">Gestión de Socios</div>
+
+      <a class="nav-item" data-view="socios">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>
+        <span>Padrón de Socios</span>
+      </a>
+
+      <a class="nav-item" data-view="alta">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <line x1="19" y1="8" x2="19" y2="14"></line>
+          <line x1="22" y1="11" x2="16" y2="11"></line>
+        </svg>
+        <span>Alta de Socio</span>
+      </a>
+
+      <div class="nav-section-title">Finanzas y Analítica</div>
+
+      <a class="nav-item" data-view="consumo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="1" x2="12" y2="23"></line>
+          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+        </svg>
+        <span>Consumo y Cobros</span>
+      </a>
+
+      <a class="nav-item" data-view="ocupacion">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="20" x2="18" y2="10"></line>
+          <line x1="12" y1="20" x2="12" y2="4"></line>
+          <line x1="6" y1="20" x2="6" y2="14"></line>
+        </svg>
+        <span>Ocupación y Gráficos</span>
+      </a>
+
+      <div class="nav-section-title">Ingeniería del Conocimiento</div>
+
+      <a class="nav-item" data-view="reglas">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+        <span>Motor de Reglas (IA)</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="demo-btn" onclick="recargarDatosDemo()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="1 4 1 10 7 10"></polyline>
+          <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+        </svg>
+        <span>Restablecer Datos Demo</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ==========================================================
+       MAIN WRAPPER & TOPBAR
+       ========================================================== -->
+  <div class="main-wrapper">
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 class="page-title" id="topbar-page-title">Panel de Control y Aforo en Vivo</h1>
+      </div>
+
+      <div class="topbar-right">
+        <div class="system-status">
+          <span class="status-dot"></span>
+          <span>Motor Facial Activo</span>
+        </div>
+
+        <button class="kiosk-btn" onclick="switchView('kiosco')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+            <circle cx="12" cy="13" r="4"></circle>
+          </svg>
+          <span>Abrir Kiosco</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="content-container">
+
+      <!-- ======================================================
+           VISTA 1: DASHBOARD GENERAL
+           ====================================================== -->
+      <section id="view-dashboard" class="view-section active">
+        <!-- KPIs -->
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-icon indigo">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+              </svg>
+            </div>
+            <div class="kpi-data">
+              <div class="kpi-label">Ocupación Actual / Aforo</div>
+              <div class="kpi-value" id="kpi-ocupacion">0 / {{ config.AFORO_MAXIMO }}</div>
+              <div class="kpi-subtext" id="kpi-porcentaje">0% de capacidad</div>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon emerald">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <polyline points="16 11 18 13 22 9"></polyline>
+              </svg>
+            </div>
+            <div class="kpi-data">
+              <div class="kpi-label">Socios Activos</div>
+              <div class="kpi-value" id="kpi-socios">0</div>
+              <div class="kpi-subtext">Padrón habilitado</div>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon amber">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+            </div>
+            <div class="kpi-data">
+              <div class="kpi-label">Sesiones Hoy</div>
+              <div class="kpi-value" id="kpi-sesiones-hoy">0</div>
+              <div class="kpi-subtext">Ingresos y egresos</div>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon rose">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="1" x2="12" y2="23"></line>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+              </svg>
+            </div>
+            <div class="kpi-data">
+              <div class="kpi-label">Excedente a Facturar</div>
+              <div class="kpi-value" id="kpi-facturacion">$0</div>
+              <div class="kpi-subtext">Período en curso</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Columnas: Presentes + Fichaje Rápido -->
+        <div class="dashboard-columns">
+          <!-- Personas Adentro -->
+          <div class="panel-card">
+            <div class="panel-card-header">
+              <div class="panel-title-group">
+                <h3 class="panel-card-title">En Coworking Ahora</h3>
+                <span class="panel-badge status-badge vigente" id="presentes-count-badge">0 adentro</span>
+              </div>
+            </div>
+            <div class="panel-card-body" style="padding: 0;">
+              <div class="table-container">
+                <table class="styled-table">
+                  <thead>
+                    <tr>
+                      <th>Socio</th>
+                      <th>Plan</th>
+                      <th>Tiempo</th>
+                      <th>Horas</th>
+                      <th style="text-align: right;">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody id="presentes-tbody">
+                    <!-- Dinámico -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Fichaje Rápido / Simulación -->
+          <div class="panel-card">
+            <div class="panel-card-header">
+              <h3 class="panel-card-title">Simulación de Fichada Facial</h3>
+            </div>
+            <div class="panel-card-body">
+              <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 18px;">
+                Elegí un socio para simular su paso frente a la cámara de acceso y observar cómo el sistema procesa su entrada o salida.
+              </p>
+
+              <div class="form-group">
+                <label class="form-label">Socio para simular</label>
+                <select id="simular-socio-select" class="form-select">
+                  <option value="">Cargando socios...</option>
+                </select>
+              </div>
+
+              <div style="display: flex; gap: 10px;">
+                <button class="btn-primary" style="flex: 1; justify-content: center;" onclick="simularPasoFacial()">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                  Simular Fichaje
+                </button>
+                <button class="btn-secondary" onclick="switchView('kiosco')">
+                  Ver Kiosco
+                </button>
+              </div>
+
+              <div style="margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--border-subtle);">
+                <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; margin-bottom: 10px;">
+                  Casos de prueba preconfigurados:
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                  <button class="btn-secondary" style="font-size: 0.75rem; padding: 6px 10px;" onclick="simularPasoFacial('Jerry Seinfeld')">
+                    Jerry (Plan Libre)
+                  </button>
+                  <button class="btn-secondary" style="font-size: 0.75rem; padding: 6px 10px;" onclick="simularPasoFacial('Elaine Benes')">
+                    Elaine (Bolsa Baja)
+                  </button>
+                  <button class="btn-secondary" style="font-size: 0.75rem; padding: 6px 10px;" onclick="simularPasoFacial('Cosmo Kramer')">
+                    Kramer (Excedente)
+                  </button>
+                  <button class="btn-secondary" style="font-size: 0.75rem; padding: 6px 10px;" onclick="simularPasoFacial('Michio Kaku')">
+                    Michio (Vencido)
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================================================
+           VISTA 2: KIOSCO FACIAL (STREAMING / SCANNER)
+           ====================================================== -->
+      <section id="view-kiosco" class="view-section">
+        <div style="display: grid; grid-template-columns: 1.8fr 1fr; gap: 28px;">
+          <!-- Visor Biométrico -->
+          <div>
+            <div class="kiosk-viewport">
+              <img src="/api/video_feed" class="kiosk-video" alt="Transmisión de Cámara de Acceso">
+              
+              <!-- HUD Biométrico Superpuesto -->
+              <div class="kiosk-hud">
+                <div class="hud-top">
+                  <div class="hud-badge">
+                    <span class="status-dot"></span>
+                    <span>CÁMARA DE ACCESO #0</span>
+                  </div>
+                  <div class="hud-badge">
+                    <span>AFORO: <strong id="kiosk-aforo-count">0</strong> / {{ config.AFORO_MAXIMO }}</span>
+                  </div>
+                </div>
+
+                <div class="hud-target-box">
+                  <div class="hud-corner corner-tl"></div>
+                  <div class="hud-corner corner-tr"></div>
+                  <div class="hud-corner corner-bl"></div>
+                  <div class="hud-corner corner-br"></div>
+                  <div class="laser-line"></div>
+                </div>
+
+                <div style="display: flex; justify-content: center;">
+                  <div class="hud-badge" style="background: rgba(0,0,0,0.8);">
+                    <span>Ubicá tu rostro frente al recuadro para validar tu ingreso</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Veredicto Visual -->
+            <div id="kiosk-verdict-card" class="verdict-card HABILITADO" style="margin-top: 20px;">
+              <div id="kiosk-verdict-icon" class="verdict-icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              </div>
+              <div>
+                <div id="kiosk-verdict-title" class="verdict-title">SISTEMA EN ESPERA</div>
+                <div id="kiosk-verdict-detail" class="verdict-detail">Mirá a la cámara o seleccioná un socio para fichar</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Panel Lateral del Kiosco -->
+          <div>
+            <div class="panel-card" style="margin-bottom: 24px;">
+              <div class="panel-card-header">
+                <h3 class="panel-card-title">Fichaje Inmediato</h3>
+              </div>
+              <div class="panel-card-body">
+                <div class="form-group">
+                  <label class="form-label">Socio a Reconocer</label>
+                  <select id="simular-socio-select-kiosk" class="form-select" onchange="simularPasoFacial(this.value)">
+                    <option value="">-- Seleccionar Socio --</option>
+                  </select>
+                </div>
+
+                <div style="margin-top: 18px;">
+                  <label class="form-label">O probar con archivo de imagen</label>
+                  <div id="kiosk-drop-zone" style="border: 2px dashed var(--border-subtle); border-radius: var(--radius-sm); padding: 24px; text-align: center; cursor: pointer; background: rgba(0,0,0,0.2); transition: var(--transition);">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--primary); margin-bottom: 8px;">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                      <circle cx="8.5" cy="8.5" r="1.5"/>
+                      <polyline points="21 15 16 10 5 21"/>
+                    </svg>
+                    <div style="font-size: 0.85rem; font-weight: 600; color: #fff;">Subir foto de prueba</div>
+                    <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 4px;">JPG, PNG (reconocimiento instantáneo)</div>
+                    <input type="file" id="kiosk-file-input" accept="image/*" style="display: none;">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Reglas Rápidas de Acceso -->
+            <div class="panel-card">
+              <div class="panel-card-header">
+                <h3 class="panel-card-title">Políticas de Acceso</h3>
+              </div>
+              <div class="panel-card-body" style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.6;">
+                <div style="margin-bottom: 8px;">🟢 <strong>Plan Libre:</strong> 7 a 23 hs (Sin tope)</div>
+                <div style="margin-bottom: 8px;">🔵 <strong>Bolsa de Horas:</strong> 40 h mensuales</div>
+                <div style="margin-bottom: 8px;">🟡 <strong>Plan Diurno:</strong> 8 a 17 hs</div>
+                <div style="margin-bottom: 8px;">⚪ <strong>Invitado:</strong> Máx 2 hs por visita</div>
+                <div>🔴 <strong>Aforo Máximo:</strong> {{ config.AFORO_MAXIMO }} personas en simultáneo</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================================================
+           VISTA 3: PADRÓN DE SOCIOS
+           ====================================================== -->
+      <section id="view-socios" class="view-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; gap: 16px; flex-wrap: wrap;">
+          <div style="display: flex; gap: 12px; align-items: center; flex: 1; max-width: 480px;">
+            <input type="text" id="buscar-socio-input" class="form-input" placeholder="Buscar por nombre o plan...">
+          </div>
+
+          <div style="display: flex; gap: 12px;">
+            <a href="/api/exportar/padron" class="btn-secondary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              Exportar CSV
+            </a>
+            <button class="btn-primary" onclick="switchView('alta')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              Nuevo Socio
+            </button>
+          </div>
+        </div>
+
+        <div id="socios-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
+          <!-- Dinámico -->
+        </div>
+      </section>
+
+      <!-- ======================================================
+           VISTA 4: ALTA DE NUEVO SOCIO
+           ====================================================== -->
+      <section id="view-alta" class="view-section">
+        <div style="max-width: 900px; margin: 0 auto;">
+          <div class="panel-card">
+            <div class="panel-card-header">
+              <h3 class="panel-card-title">Registrar Nuevo Socio con Biometría</h3>
+            </div>
+            <div class="panel-card-body">
+              <form id="form-alta-socio" style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px;">
+                <!-- Datos Personales y Plan -->
+                <div>
+                  <div class="form-group">
+                    <label class="form-label">Nombre y Apellido</label>
+                    <input type="text" id="alta-nombre" class="form-input" placeholder="Ej: Lionel Messi" required>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label">Plan a Asignar</label>
+                    <select id="alta-plan" class="form-select" required>
+                      <option value="libre">Plan Libre (Acceso ilimitado 7 a 23 hs)</option>
+                      <option value="bolsa">Plan por Bolsa de Horas (40h/mes + excedentes)</option>
+                      <option value="diurno">Plan Diurno (8 a 17 hs)</option>
+                      <option value="pase_diario">Pase Diario (9 horas en el día)</option>
+                      <option value="invitado">Invitado (Máx 2 horas)</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label">Días de Vigencia</label>
+                    <input type="number" id="alta-dias" class="form-input" value="30" min="1" max="365">
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label">Opcional: Subir foto desde disco</label>
+                    <input type="file" id="alta-file-input" class="form-input" accept="image/*">
+                  </div>
+
+                  <div style="margin-top: 28px;">
+                    <button type="submit" class="btn-primary" style="width: 100%; justify-content: center;">
+                      Guardar Socio y Generar Vector Facial
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Captura de Foto con Cámara Web -->
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                  <label class="form-label" style="align-self: flex-start;">Fotografía Facial del Socio</label>
+                  
+                  <div style="width: 100%; aspect-ratio: 4/3; background: #000; border-radius: var(--radius-md); overflow: hidden; position: relative; border: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: center;">
+                    <video id="alta-webcam-preview" autoplay playsinline style="width: 100%; height: 100%; object-fit: cover;"></video>
+                    <img id="alta-foto-snapshot" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+                    
+                    <div id="alta-cam-placeholder" style="display: none; flex-direction: column; align-items: center; color: var(--text-dim); gap: 10px;">
+                      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                        <circle cx="12" cy="13" r="4"></circle>
+                      </svg>
+                      <span>Cámara no detectada en navegador</span>
+                      <span style="font-size: 0.75rem;">Podés usar el botón de subir foto a la izquierda</span>
+                    </div>
+                  </div>
+
+                  <div style="display: flex; gap: 10px; margin-top: 14px; width: 100%;">
+                    <button type="button" id="btn-capture-photo" class="btn-secondary" style="flex: 1; justify-content: center;" onclick="capturarFotoWebcam()">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <circle cx="12" cy="12" r="3"></circle>
+                      </svg>
+                      Capturar Foto
+                    </button>
+                    <button type="button" id="btn-retake-photo" class="btn-secondary" style="flex: 1; justify-content: center; display: none;" onclick="retomarFotoWebcam()">
+                      Repetir Foto
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================================================
+           VISTA 5: CONSUMO Y FACTURACIÓN
+           ====================================================== -->
+      <section id="view-consumo" class="view-section">
+        <div class="kpi-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 24px;">
+          <div class="kpi-card">
+            <div class="kpi-icon rose">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="1" x2="12" y2="23"></line>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+              </svg>
+            </div>
+            <div class="kpi-data">
+              <div class="kpi-label">Total a Facturar por Excedentes</div>
+              <div class="kpi-value" id="consumo-total-facturar">$0</div>
+              <div class="kpi-subtext">Mes en curso</div>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon indigo">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+            </div>
+            <div class="kpi-data">
+              <div class="kpi-label">Horas Totales Consumidas</div>
+              <div class="kpi-value" id="consumo-total-horas">0 hs</div>
+              <div class="kpi-subtext">En todos los socios</div>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon emerald">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+              </svg>
+            </div>
+            <div class="kpi-data">
+              <div class="kpi-label">Sesiones Computadas</div>
+              <div class="kpi-value" id="consumo-total-sesiones">0</div>
+              <div class="kpi-subtext">Registros finalizados</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-card">
+          <div class="panel-card-header">
+            <h3 class="panel-card-title">Desglose de Consumo por Socio</h3>
+            <a href="/api/exportar/consumo" class="btn-secondary" style="padding: 6px 14px; font-size: 0.82rem;">
+              Descargar CSV
+            </a>
+          </div>
+          <div class="panel-card-body" style="padding: 0;">
+            <div class="table-container">
+              <table class="styled-table">
+                <thead>
+                  <tr>
+                    <th>Socio</th>
+                    <th>Plan</th>
+                    <th style="text-align: center;">Sesiones</th>
+                    <th style="text-align: right;">Horas Mes</th>
+                    <th style="text-align: right;">Excedente</th>
+                    <th style="text-align: right;">Importe Excedente</th>
+                  </tr>
+                </thead>
+                <tbody id="consumo-tbody">
+                  <!-- Dinámico -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================================================
+           VISTA 6: OCUPACIÓN Y MÉTRICAS
+           ====================================================== -->
+      <section id="view-ocupacion" class="view-section">
+        <div class="panel-card" style="margin-bottom: 28px;">
+          <div class="panel-card-header">
+            <div>
+              <h3 class="panel-card-title">Curva de Ocupación por Franja Horaria (7:00 a 23:00)</h3>
+              <p style="font-size: 0.8rem; color: var(--text-dim); margin-top: 4px;">
+                Permite detectar picos de demanda y planificar el aforo del coworking
+              </p>
+            </div>
+            <div style="display: flex; gap: 16px;">
+              <div style="text-align: right;">
+                <div style="font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase;">Hora Pico</div>
+                <div style="font-size: 1.1rem; font-weight: 700; color: #818cf8;" id="ocupacion-hora-pico">--</div>
+              </div>
+              <div style="text-align: right;">
+                <div style="font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase;">Pico Concurrencia</div>
+                <div style="font-size: 1.1rem; font-weight: 700; color: #34d399;" id="ocupacion-max-concurrencia">--</div>
+              </div>
+            </div>
+          </div>
+          <div class="panel-card-body" style="height: 320px; position: relative;">
+            <canvas id="ocupacion-canvas"></canvas>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1.3fr 1fr; gap: 24px;">
+          <!-- Últimos Accesos -->
+          <div class="panel-card">
+            <div class="panel-card-header">
+              <h3 class="panel-card-title">Historial de Accesos Recientes</h3>
+              <a href="/api/exportar/historial" class="btn-secondary" style="padding: 4px 10px; font-size: 0.75rem;">
+                CSV
+              </a>
+            </div>
+            <div class="panel-card-body" style="padding: 0; max-height: 400px; overflow-y: auto;">
+              <table class="styled-table">
+                <thead>
+                  <tr>
+                    <th>Socio</th>
+                    <th>Plan</th>
+                    <th>Entrada</th>
+                    <th>Salida</th>
+                    <th>Horas</th>
+                  </tr>
+                </thead>
+                <tbody id="historial-tbody">
+                  <!-- Dinámico -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Auditoría de Rechazos -->
+          <div class="panel-card">
+            <div class="panel-card-header">
+              <h3 class="panel-card-title">Intentos Denegados</h3>
+              <span class="status-badge vencido">Auditoría</span>
+            </div>
+            <div class="panel-card-body" style="padding: 0; max-height: 400px; overflow-y: auto;">
+              <table class="styled-table">
+                <thead>
+                  <tr>
+                    <th>Fecha/Hora</th>
+                    <th>Persona</th>
+                    <th>Motivo</th>
+                  </tr>
+                </thead>
+                <tbody id="rechazados-tbody">
+                  <!-- Dinámico -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================================================
+           VISTA 7: MOTOR DE REGLAS (INGENIERÍA DEL CONOCIMIENTO)
+           ====================================================== -->
+      <section id="view-reglas" class="view-section">
+        <div style="margin-bottom: 24px;">
+          <h2 style="font-size: 1.3rem; font-weight: 800; color: #fff;">Base de Conocimiento y Motor de Inferencia</h2>
+          <p style="color: var(--text-muted); font-size: 0.88rem; margin-top: 4px;">
+            El reconocimiento facial responde <em>"¿Quién es?"</em>. El motor de reglas responde <em>"¿Puede entrar?"</em> basándose en hechos y reglas de inferencia.
+          </p>
+        </div>
+
+        <div class="sandbox-container">
+          <!-- Sandbox de Experimentación -->
+          <div class="panel-card">
+            <div class="panel-card-header">
+              <h3 class="panel-card-title">Simulador de Inferencia</h3>
+            </div>
+            <div class="panel-card-body">
+              <p style="font-size: 0.82rem; color: var(--text-dim); margin-bottom: 18px;">
+                Cambiá los hechos del entorno para verificar qué regla se activa en el motor experto:
+              </p>
+
+              <div class="form-group">
+                <label class="form-label">Socio a evaluar</label>
+                <select id="sandbox-socio-select" class="form-select"></select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Hora del Día (0 a 23 hs)</label>
+                <input type="range" id="sandbox-hora" min="0" max="23" value="12" style="width: 100%; accent-color: var(--primary);" oninput="document.getElementById('sandbox-hora-val').textContent = `${this.value}:00 hs`">
+                <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-dim); margin-top: 4px;">
+                  <span>07:00</span>
+                  <span id="sandbox-hora-val" style="font-weight: 700; color: #fff;">12:00 hs</span>
+                  <span>23:00</span>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Ocupación Actual de Coworking (Aforo)</label>
+                <input type="range" id="sandbox-aforo" min="0" max="30" value="7" style="width: 100%; accent-color: var(--primary);" oninput="document.getElementById('sandbox-aforo-val').textContent = `${this.value} personas`">
+                <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-dim); margin-top: 4px;">
+                  <span>0</span>
+                  <span id="sandbox-aforo-val" style="font-weight: 700; color: #fff;">7 personas</span>
+                  <span>Tope: {{ config.AFORO_MAXIMO }}</span>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Horas Consumidas en el Mes</label>
+                <input type="number" id="sandbox-horas-usadas" class="form-input" value="38" step="0.5" min="0">
+              </div>
+
+              <div class="form-group" style="display: flex; align-items: center; gap: 10px;">
+                <input type="checkbox" id="sandbox-activo" checked style="width: 18px; height: 18px; accent-color: var(--primary);">
+                <label for="sandbox-activo" style="font-size: 0.85rem; font-weight: 600; cursor: pointer;">Membresía activa en base de datos</label>
+              </div>
+
+              <!-- Tarjeta de Resolución -->
+              <div id="sandbox-resolucion-card" class="verdict-card HABILITADO" style="margin-top: 24px; padding: 14px;">
+                <div style="flex-grow: 1;">
+                  <div id="sandbox-resolucion-title" class="verdict-title" style="font-size: 1.1rem;">RESOLUCIÓN</div>
+                  <div id="sandbox-resolucion-motivo" class="verdict-detail" style="font-size: 0.8rem;">Evaluando motor...</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Base de Reglas Activas -->
+          <div class="panel-card">
+            <div class="panel-card-header">
+              <h3 class="panel-card-title">Reglas de la Base de Conocimiento</h3>
+            </div>
+            <div class="panel-card-body" id="reglas-lista-container">
+              <!-- Dinámico -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ==========================================================
+       MODAL DE RENOVACIÓN DE PLAN
+       ========================================================== -->
+  <div class="modal-overlay" id="modal-renovar">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Renovar Membresía</h3>
+        <button class="modal-close" onclick="cerrarModalRenovar()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 18px;">
+          Renovar el plan para <strong id="renovar-socio-nombre" style="color: #fff;"></strong> reiniciará su bolsa de horas a 0 y extenderá la fecha de vigencia.
+        </p>
+
+        <input type="hidden" id="renovar-socio-id">
+
+        <div class="form-group">
+          <label class="form-label">Plan a Asignar</label>
+          <select id="renovar-plan-select" class="form-select">
+            <option value="libre">Plan Libre</option>
+            <option value="bolsa">Plan por Bolsa de Horas</option>
+            <option value="diurno">Plan Diurno</option>
+            <option value="pase_diario">Pase Diario</option>
+            <option value="invitado">Invitado</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Días Adicionales de Vigencia</label>
+          <input type="number" id="renovar-dias-input" class="form-input" value="30" min="1" max="365">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="cerrarModalRenovar()">Cancelar</button>
+        <button class="btn-primary" onclick="confirmarRenovacion()">Confirmar Renovación</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Script Principal -->
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

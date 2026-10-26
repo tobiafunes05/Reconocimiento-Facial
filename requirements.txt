@@ -1,0 +1,6 @@
+# Librerías del proyecto
+face_recognition     # reconocimiento facial (requiere dlib: ver README)
+opencv-python        # captura de cámara y procesamiento de imágenes (cv2)
+numpy                # operaciones sobre los vectores de rasgos faciales
+
+# sqlite3, os, datetime, csv, pickle y random son parte de Python, no se instalan
