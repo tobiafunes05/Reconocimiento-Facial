@@ -392,8 +392,8 @@ function renderSociosGrid(socios) {
         <button class="btn-secondary" style="flex: 1; padding: 8px; font-size: 0.78rem; justify-content: center;" onclick="abrirModalRenovar(${s.id}, '${s.nombre}', '${s.plan}')">
           Renovar Plan
         </button>
-        <button class="btn-danger" style="padding: 8px 12px; font-size: 0.78rem;" title="Dar de baja" onclick="darDeBajaSocio(${s.id}, '${s.nombre}')">
-          Baja
+        <button class="btn-danger" style="padding: 8px 12px; font-size: 0.78rem;" title="Eliminar socio del sistema" onclick="darDeBajaSocio(${s.id}, '${s.nombre}')">
+          Eliminar
         </button>
       </div>
     </div>
@@ -441,14 +441,15 @@ async function confirmarRenovacion() {
 }
 
 async function darDeBajaSocio(id, nombre) {
-  if (!confirm(`¿Dar de baja la membresía de ${nombre}?`)) return;
+  if (!confirm(`¿Eliminar definitivamente a "${nombre}"? Se borrarán sus datos, registros y fotografía del sistema facial.`)) return;
   try {
     const res = await fetch(API.bajaSocio(id), { method: 'POST' });
     const d = await res.json();
     showToast(d.mensaje, 'success');
     loadSociosList();
+    loadDashboardData(false);
   } catch (e) {
-    showToast('Error al procesar baja', 'error');
+    showToast('Error al eliminar socio', 'error');
   }
 }
 

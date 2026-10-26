@@ -112,9 +112,28 @@ def reiniciar_periodo_si_cambio_mes(socio):
     return socio
 
 
-def baja_socio(nombre):
+def baja_socio(nombre, borrar_foto=True):
+    """Elimina definitivamente al socio, sus registros, reservas y su foto."""
     with conectar() as con:
-        return con.execute("UPDATE socios SET activo=0 WHERE nombre=?", (nombre,)).rowcount
+        socio = con.execute("SELECT * FROM socios WHERE nombre=?", (nombre,)).fetchone()
+        if not socio:
+            return 0
+        socio_id = socio["id"]
+        con.execute("DELETE FROM registros WHERE socio_id=?", (socio_id,))
+        con.execute("DELETE FROM reservas WHERE socio_id=?", (socio_id,))
+        filas = con.execute("DELETE FROM socios WHERE id=?", (socio_id,)).rowcount
+
+    # Eliminar foto de la carpeta Socios si existe
+    if borrar_foto and os.path.isdir(config.CARPETA_SOCIOS):
+        for archivo in os.listdir(config.CARPETA_SOCIOS):
+            nom_arch, _ = os.path.splitext(archivo)
+            if nom_arch.lower() == nombre.lower():
+                try:
+                    os.remove(os.path.join(config.CARPETA_SOCIOS, archivo))
+                except Exception as e:
+                    print(f"[!] Error al eliminar foto de {nombre}: {e}")
+
+    return filas
 
 
 # ---------------- Registros de acceso ----------------

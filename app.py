@@ -256,15 +256,23 @@ def api_renovar_socio(socio_id):
 
 @app.route("/api/socios/<int:socio_id>/baja", methods=["POST"])
 def api_baja_socio(socio_id):
-    """Da de baja a un socio."""
+    """Elimina definitivamente a un socio, sus registros y su foto."""
     socio = None
     with bd.conectar() as con:
         socio = con.execute("SELECT * FROM socios WHERE id = ?", (socio_id,)).fetchone()
     if not socio:
         return jsonify({"error": "Socio no encontrado"}), 404
 
-    bd.baja_socio(socio["nombre"])
-    return jsonify({"mensaje": f"Socio '{socio['nombre']}' dado de baja"})
+    nombre = socio["nombre"]
+    bd.baja_socio(nombre, borrar_foto=True)
+
+    # Actualizar caché de reconocimiento facial para remover su vector
+    try:
+        rec.cargar_base(forzar=True)
+    except Exception as e:
+        print(f"[!] Error al actualizar rostros tras baja: {e}")
+
+    return jsonify({"mensaje": f"Socio '{nombre}' eliminado definitivamente del sistema"})
 
 
 # ==========================================================
