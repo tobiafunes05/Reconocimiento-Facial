@@ -21,7 +21,8 @@ const API = {
   recargarDemo: '/api/demo/recargar',
   reservas: '/api/reservas',
   comparar: '/api/comparar',
-  camaraCapturar: '/api/camara/capturar'
+  camaraCapturar: '/api/camara/capturar',
+  ficharCamara: '/api/acceso/fichar_camara'
 };
 
 // Estado global de la aplicación
@@ -263,13 +264,37 @@ async function loadSimulationSelect() {
     const socios = await res.json();
     AppState.sociosList = socios;
 
-    const select = document.getElementById('simular-socio-select');
-    if (!select) return;
-
-    select.innerHTML = '<option value="">-- Seleccionar Socio para Simular Detección --</option>' +
+    const options = '<option value="">-- Seleccionar Socio --</option>' +
       socios.map(s => `<option value="${s.nombre}">${s.nombre} (${s.plan_nombre})</option>`).join('');
+
+    const selectDash = document.getElementById('simular-socio-select');
+    if (selectDash) selectDash.innerHTML = options;
+
+    const selectKiosk = document.getElementById('simular-socio-select-kiosk');
+    if (selectKiosk) selectKiosk.innerHTML = options;
   } catch (e) {
     console.error(e);
+  }
+}
+
+async function ficharConCamaraKiosco() {
+  showToast('Escaneando rostro frente a la cámara de acceso...', 'warning');
+  try {
+    const res = await fetch(API.ficharCamara, { method: 'POST' });
+    const data = await res.json();
+    mostrarVeredictoKiosco(data);
+    loadDashboardData(false);
+    loadPresentesSummary();
+
+    if (data.decision === 'HABILITADO') {
+      showToast(`${data.tipo_movimiento === 'SALIDA' ? 'Salida' : 'Ingreso'} registrado: ${data.etiqueta}`, 'success');
+    } else if (data.decision === 'ADVERTENCIA') {
+      showToast(`Aviso: ${data.detalle}`, 'warning');
+    } else {
+      showToast(`Acceso no permitido: ${data.motivo || data.etiqueta}`, 'error');
+    }
+  } catch (err) {
+    showToast('Error al conectar con la cámara de acceso', 'error');
   }
 }
 

@@ -401,6 +401,105 @@ def api_simular_acceso():
     })
 
 
+@app.route("/api/acceso/fichar_camara", methods=["POST", "GET"])
+def api_fichar_camara():
+    """Captura directamente de la cámara y procesa entrada/salida biométrica."""
+    import camara_util
+    exito, frame = camara_util.capturar_fotograma_directo(config.INDICE_CAMARA)
+    if not exito or frame is None:
+        return jsonify({
+            "decision": reglas.RECHAZADO,
+            "etiqueta": "ERROR DE CÁMARA",
+            "motivo": "No se pudo acceder a la cámara del kiosco"
+        }), 500
+
+    caras = rec.buscar_rostros(frame)
+    if not caras:
+        return jsonify({
+            "decision": reglas.RECHAZADO,
+            "nombre": "Desconocido",
+            "tipo_movimiento": "DENEGADO",
+            "etiqueta": "ROSTRO NO DETECTADO",
+            "motivo": "Por favor mirá de frente a la cámara con buena luz e intentá nuevamente"
+        })
+
+    ubicacion, cod = caras[0]
+    nombres_db, cods_db = rec.cargar_base()
+    nombre_id, dist = rec.identificar(cod, nombres_db, cods_db)
+
+    if not nombre_id:
+        foto_ruta = control_acceso._guardar_foto_intento(frame, ubicacion)
+        bd.registrar_intento(None, f"Persona desconocida (distancia {dist:.2f})", foto_ruta)
+        return jsonify({
+            "decision": reglas.RECHAZADO,
+            "nombre": "Desconocido",
+            "tipo_movimiento": "DENEGADO",
+            "etiqueta": "ROSTRO NO RECONOCIDO",
+            "motivo": "Tu rostro no coincide con ningún socio registrado",
+            "distancia": dist
+        })
+
+    socio = bd.obtener_socio(nombre_id)
+    if not socio:
+        return jsonify({
+            "decision": reglas.RECHAZADO,
+            "nombre": nombre_id,
+            "motivo": "El socio no figura en la base de datos"
+        })
+
+    socio = bd.reiniciar_periodo_si_cambio_mes(socio)
+    abierto = bd.registro_abierto(socio["id"])
+
+    # Salida si ya estaba adentro
+    if abierto:
+        entrada = datetime.strptime(abierto["entrada"], "%Y-%m-%d %H:%M:%S")
+        horas = round((datetime.now() - entrada).total_seconds() / 3600, 2)
+        dentro, excedente, importe = reglas.calcular_consumo(socio, horas)
+        bd.registrar_salida(abierto["id"], horas, excedente)
+        bd.sumar_horas_usadas(socio["id"], horas)
+        detalle = f"Sesión de {horas:.2f} h"
+        if excedente > 0:
+            detalle += f" | {excedente:.2f} h excedente (${importe:,.0f})"
+        return jsonify({
+            "decision": reglas.HABILITADO,
+            "tipo_movimiento": "SALIDA",
+            "nombre": nombre_id,
+            "etiqueta": f"CHAU {nombre_id}",
+            "detalle": detalle,
+            "horas_sesion": horas,
+            "excedente": excedente,
+            "importe": importe,
+            "socio_id": socio["id"]
+        })
+
+    # Entrada
+    analisis = reglas.evaluar_acceso(socio, bd.cantidad_adentro(), bd.reserva_de_hoy(socio["id"]))
+    if analisis["decision"] == reglas.RECHAZADO:
+        foto_ruta = control_acceso._guardar_foto_intento(frame, ubicacion)
+        bd.registrar_intento(nombre_id, analisis["motivo"], foto_ruta)
+        return jsonify({
+            "decision": reglas.RECHAZADO,
+            "tipo_movimiento": "DENEGADO",
+            "nombre": nombre_id,
+            "etiqueta": f"RECHAZADO: {nombre_id}",
+            "motivo": analisis["motivo"],
+            "regla_violada": analisis["reglas"][0] if analisis.get("reglas") else None,
+            "socio_id": socio["id"]
+        })
+
+    bd.registrar_entrada(socio["id"], nombre_id)
+    detalle = " | ".join(analisis["avisos"]) if analisis["avisos"] else config.PLANES[socio["plan"]]["nombre"]
+    return jsonify({
+        "decision": analisis["decision"],
+        "tipo_movimiento": "ENTRADA",
+        "nombre": nombre_id,
+        "etiqueta": f"HOLA {nombre_id}",
+        "detalle": detalle,
+        "avisos": analisis["avisos"],
+        "socio_id": socio["id"]
+    })
+
+
 @app.route("/api/acceso/checkout_manual", methods=["POST"])
 def api_checkout_manual():
     """Fuerza la salida de un socio que figura adentro."""

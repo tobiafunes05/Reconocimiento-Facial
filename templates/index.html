@@ -382,6 +382,17 @@
               </div>
             </div>
 
+            <!-- Botón de Fichaje con Cámara en Kiosco -->
+            <div style="margin-top: 14px;">
+              <button type="button" class="btn-primary" style="width: 100%; justify-content: center; font-size: 1.05rem; padding: 13px; gap: 10px; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);" onclick="ficharConCamaraKiosco()">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                  <circle cx="12" cy="13" r="4"></circle>
+                </svg>
+                <span>Escanear Rostro y Fichar con Cámara</span>
+              </button>
+            </div>
+
             <!-- Veredicto Visual -->
             <div id="kiosk-verdict-card" class="verdict-card HABILITADO" style="margin-top: 20px;">
               <div id="kiosk-verdict-icon" class="verdict-icon">
@@ -409,6 +420,9 @@
                     <option value="">-- Seleccionar Socio --</option>
                   </select>
                 </div>
+                <button type="button" class="btn-secondary" style="width: 100%; justify-content: center; margin-top: 8px;" onclick="simularPasoFacial(document.getElementById('simular-socio-select-kiosk').value)">
+                  Fichar Socio Seleccionado
+                </button>
 
                 <div style="margin-top: 18px;">
                   <label class="form-label">O probar con archivo de imagen</label>
