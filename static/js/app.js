@@ -18,7 +18,9 @@ const API = {
   intentos: '/api/intentos',
   reglas: '/api/reglas',
   evaluarReglas: '/api/reglas/evaluar',
-  recargarDemo: '/api/demo/recargar'
+  recargarDemo: '/api/demo/recargar',
+  reservas: '/api/reservas',
+  comparar: '/api/comparar'
 };
 
 // Estado global de la aplicación
@@ -26,6 +28,7 @@ const AppState = {
   currentView: 'dashboard',
   sociosList: [],
   presentesList: [],
+  reservasList: [],
   chartInstance: null,
   webcamStream: null,
   capturedPhotoBase64: null,
@@ -80,9 +83,11 @@ function switchView(viewName) {
     kiosco: 'Kiosco de Acceso Biométrico Facial',
     socios: 'Padrón de Socios y Membresías',
     alta: 'Alta de Nuevo Socio',
+    reservas: 'Gestión de Reservas de Salas (HU-09)',
     consumo: 'Reporte de Consumo y Facturación',
     ocupacion: 'Métricas de Ocupación y Analítica',
-    reglas: 'Base de Conocimiento y Motor de Reglas (IA)'
+    reglas: 'Base de Conocimiento y Motor de Reglas (IA)',
+    comparador: 'Verificación Biométrica y Calibración (CU-07)'
   };
   document.getElementById('topbar-page-title').textContent = titles[viewName] || 'Sistema de Control';
 
@@ -90,10 +95,12 @@ function switchView(viewName) {
   if (viewName === 'dashboard') loadDashboardData();
   if (viewName === 'kiosco') startKioskMode();
   if (viewName === 'socios') loadSociosList();
+  if (viewName === 'alta') startAltaWebcam();
+  if (viewName === 'reservas') loadReservas();
   if (viewName === 'consumo') loadConsumoData();
   if (viewName === 'ocupacion') loadOcupacionChart();
   if (viewName === 'reglas') loadReglasSandbox();
-  if (viewName === 'alta') startAltaWebcam();
+  if (viewName === 'comparador') initComparadorView();
 }
 
 // ==========================================================
@@ -134,8 +141,54 @@ async function loadDashboardData(showLoading = true) {
     // Cargar selector de simulación rápida
     loadSimulationSelect();
 
+    // Cargar reservas del día (HU-09)
+    loadDashboardReservas();
+
   } catch (err) {
     console.error('Error cargando datos del dashboard:', err);
+  }
+}
+
+async function loadDashboardReservas() {
+  try {
+    const res = await fetch(API.reservas);
+    const reservas = await res.json();
+    const countBadge = document.getElementById('dashboard-reservas-count');
+    const tbody = document.getElementById('dashboard-reservas-tbody');
+
+    if (countBadge) countBadge.textContent = `${reservas.length} programadas`;
+    if (!tbody) return;
+
+    if (reservas.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="4" style="text-align: center; padding: 24px; color: var(--text-dim);">
+            No hay reservas de sala agendadas para el día de hoy.
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = reservas.map(r => `
+      <tr>
+        <td>
+          <div style="font-weight: 600; color: #fff;">${r.socio_nombre}</div>
+          <div style="font-size: 0.75rem; color: var(--text-dim);">${r.plan}</div>
+        </td>
+        <td><span class="plan-badge plan-libre">${r.sala}</span></td>
+        <td style="font-family: 'JetBrains Mono', monospace; font-weight: 600; color: #818cf8;">
+          ${r.hora_desde} a ${r.hora_hasta} hs
+        </td>
+        <td>
+          <span class="status-badge por_vencer" style="font-size: 0.72rem;">
+            RN-09 Recordatorio al Ingresar
+          </span>
+        </td>
+      </tr>
+    `).join('');
+  } catch (e) {
+    console.error('Error cargando reservas del dashboard:', e);
   }
 }
 
@@ -674,21 +727,51 @@ async function loadOcupacionChart() {
       `).join('');
     }
 
-    // Render Rechazados
+    // Render Rechazados (HU-11 / CU-06)
     const rechTbody = document.getElementById('rechazados-tbody');
     if (rechTbody) {
       rechTbody.innerHTML = resRechazados.length ? resRechazados.map(r => `
         <tr>
+          <td>
+            ${r.foto_url ? `
+              <img src="${r.foto_url}" alt="Rostro" 
+                   style="width: 36px; height: 36px; border-radius: 6px; object-fit: cover; border: 1px solid rgba(251, 113, 133, 0.4); cursor: pointer;"
+                   onclick="verFotoIntento('${r.foto_url}', '${r.nombre}', '${r.motivo}', '${r.momento}')"
+                   title="Click para ampliar imagen">
+            ` : `
+              <div style="width: 36px; height: 36px; border-radius: 6px; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 0.65rem; color: var(--text-dim);">
+                S/F
+              </div>
+            `}
+          </td>
           <td style="font-size: 0.8rem; color: var(--text-dim);">${r.momento}</td>
           <td><span style="font-weight: 600; color: #fb7185;">${r.nombre}</span></td>
           <td style="color: var(--text-muted);">${r.motivo}</td>
         </tr>
-      `).join('') : `<tr><td colspan="3" style="text-align: center; color: var(--text-dim); padding: 20px;">Sin rechazos registrados</td></tr>`;
+      `).join('') : `<tr><td colspan="4" style="text-align: center; color: var(--text-dim); padding: 20px;">Sin rechazos registrados</td></tr>`;
     }
 
   } catch (e) {
     console.error(e);
   }
+}
+
+function verFotoIntento(url, nombre, motivo, momento) {
+  const modal = document.getElementById('modal-foto-intento');
+  const img = document.getElementById('modal-foto-intento-img');
+  const desc = document.getElementById('modal-foto-intento-desc');
+  const title = document.getElementById('modal-foto-intento-title');
+
+  if (modal && img && desc) {
+    img.src = url;
+    if (title) title.textContent = `Registro Facial: ${nombre}`;
+    desc.innerHTML = `<strong>Motivo:</strong> ${motivo}<br><span style="color: var(--text-dim);">${momento}</span>`;
+    modal.classList.add('active');
+  }
+}
+
+function cerrarModalFotoIntento() {
+  document.getElementById('modal-foto-intento')?.classList.remove('active');
 }
 
 // ==========================================================
@@ -727,7 +810,10 @@ function renderReglasList(reglas, evaluaciones = null) {
     return `
       <div class="rule-box ${triggeredClass}">
         <div class="rule-header">
-          <span class="rule-code">${r.codigo}</span>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="rule-code" style="font-weight: 800; color: #818cf8;">${r.codigo}</span>
+            ${r.historia ? `<span style="font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; background: rgba(99,102,241,0.15); color: #c7d2fe; font-weight: 600;">${r.historia}</span>` : ''}
+          </div>
           <span class="status-badge ${r.decision === 'RECHAZADO' ? 'vencido' : 'por_vencer'}">
             ${r.decision}
           </span>
@@ -751,12 +837,13 @@ async function evaluarReglasSandbox() {
   const aforo = document.getElementById('sandbox-aforo')?.value || 5;
   const horas_usadas = document.getElementById('sandbox-horas-usadas')?.value || 0;
   const activo = document.getElementById('sandbox-activo')?.checked;
+  const tiene_reserva = document.getElementById('sandbox-reserva')?.checked;
 
   try {
     const res = await fetch(API.evaluarReglas, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre, hora, adentro: aforo, horas_usadas, activo })
+      body: JSON.stringify({ nombre, hora, adentro: aforo, horas_usadas, activo, tiene_reserva })
     });
     const d = await res.json();
 
@@ -775,6 +862,242 @@ async function evaluarReglasSandbox() {
 
   } catch (e) {
     console.error(e);
+  }
+}
+
+// ==========================================================
+// GESTIÓN DE RESERVAS DE SALAS (HU-09 / RN-09)
+// ==========================================================
+async function loadReservas() {
+  try {
+    const [resReservas, resSocios] = await Promise.all([
+      fetch(API.reservas).then(r => r.json()),
+      fetch(API.socios).then(r => r.json())
+    ]);
+
+    // Llenar selector de socios
+    const select = document.getElementById('reserva-socio-select');
+    if (select) {
+      select.innerHTML = resSocios.map(s => `
+        <option value="${s.id}">${s.nombre} (${s.plan_nombre})</option>
+      `).join('');
+    }
+
+    // Setear fecha por defecto a hoy
+    const fechaInput = document.getElementById('reserva-fecha');
+    if (fechaInput && !fechaInput.value) {
+      const hoy = new Date().toISOString().split('T')[0];
+      fechaInput.value = hoy;
+    }
+
+    // Render tabla de reservas
+    const tbody = document.getElementById('reservas-tbody');
+    if (!tbody) return;
+
+    if (resReservas.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" style="text-align: center; padding: 30px; color: var(--text-dim);">
+            No hay reservas programadas actualmente.
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = resReservas.map(r => `
+      <tr>
+        <td>
+          <div style="font-weight: 600; color: #fff;">${r.socio_nombre}</div>
+          <div style="font-size: 0.75rem; color: var(--text-dim);">${r.plan}</div>
+        </td>
+        <td><span class="plan-badge plan-libre">${r.sala}</span></td>
+        <td style="font-size: 0.82rem; color: var(--text-muted);">${r.fecha}</td>
+        <td style="font-family: 'JetBrains Mono', monospace; font-weight: 600; color: #818cf8;">
+          ${r.hora_desde} a ${r.hora_hasta} hs
+        </td>
+        <td>
+          <span class="status-badge vigente" style="font-size: 0.72rem;">
+            Aviso automático al entrar
+          </span>
+        </td>
+      </tr>
+    `).join('');
+
+  } catch (e) {
+    console.error('Error cargando reservas:', e);
+  }
+}
+
+async function registrarNuevaReserva(e) {
+  e.preventDefault();
+  const socio_id = document.getElementById('reserva-socio-select')?.value;
+  const sala = document.getElementById('reserva-sala-select')?.value;
+  const fecha = document.getElementById('reserva-fecha')?.value;
+  const hora_desde = document.getElementById('reserva-desde')?.value;
+  const hora_hasta = document.getElementById('reserva-hasta')?.value;
+
+  if (!socio_id || !sala || !fecha || !hora_desde || !hora_hasta) {
+    showToast('Complete todos los campos de la reserva', 'warning');
+    return;
+  }
+
+  try {
+    const res = await fetch(API.reservas, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ socio_id, sala, fecha, hora_desde, hora_hasta })
+    });
+    const d = await res.json();
+    if (res.ok) {
+      showToast('Reserva de sala confirmada exitosamente', 'success');
+      loadReservas();
+      loadDashboardReservas();
+    } else {
+      showToast(d.error || 'Error al crear reserva', 'error');
+    }
+  } catch (err) {
+    showToast('Error de conexión', 'error');
+  }
+}
+
+// ==========================================================
+// COMPARADOR FACIAL BIOMÉTRICO (CU-07)
+// ==========================================================
+let compFileA = null;
+let compFileB = null;
+
+async function initComparadorView() {
+  try {
+    const res = await fetch(API.socios);
+    const socios = await res.json();
+
+    const selectA = document.getElementById('comp-socio-a');
+    const selectB = document.getElementById('comp-socio-b');
+
+    const opciones = '<option value="">-- O subir archivo abajo --</option>' + socios.map(s => `
+      <option value="${s.nombre}">${s.nombre} (${s.plan_nombre})</option>
+    `).join('');
+
+    if (selectA) selectA.innerHTML = opciones;
+    if (selectB) selectB.innerHTML = opciones;
+
+    // Seleccionar por defecto dos socios para prueba inmediata
+    if (socios.length >= 2) {
+      if (selectA) {
+        selectA.value = socios[0].nombre;
+        previewComparadorSocio('a', socios[0].nombre);
+      }
+      if (selectB) {
+        selectB.value = socios[1].nombre;
+        previewComparadorSocio('b', socios[1].nombre);
+      }
+    }
+  } catch (e) {
+    console.error('Error inicializando comparador:', e);
+  }
+}
+
+function previewComparadorSocio(lado, nombre) {
+  const img = document.getElementById(`comp-preview-${lado}`);
+  const empty = document.getElementById(`comp-empty-${lado}`);
+  if (!nombre) {
+    if (img) img.style.display = 'none';
+    if (empty) empty.style.display = 'block';
+    return;
+  }
+  if (lado === 'a') compFileA = null;
+  if (lado === 'b') compFileB = null;
+
+  if (img) {
+    img.src = `/fotos/socios/${nombre}.jpg`;
+    img.style.display = 'block';
+  }
+  if (empty) empty.style.display = 'none';
+}
+
+function previewComparadorFile(lado, input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  if (lado === 'a') {
+    compFileA = file;
+    document.getElementById('comp-socio-a').value = '';
+  } else {
+    compFileB = file;
+    document.getElementById('comp-socio-b').value = '';
+  }
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = document.getElementById(`comp-preview-${lado}`);
+    const empty = document.getElementById(`comp-empty-${lado}`);
+    if (img) {
+      img.src = e.target.result;
+      img.style.display = 'block';
+    }
+    if (empty) empty.style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function ejecutarComparacionBiometrica() {
+  const socioA = document.getElementById('comp-socio-a')?.value;
+  const socioB = document.getElementById('comp-socio-b')?.value;
+  const tolerancia = document.getElementById('comp-tolerancia')?.value || 0.50;
+
+  if (!socioA && !compFileA) {
+    showToast('Seleccione o suba la primera imagen (Foto 1)', 'warning');
+    return;
+  }
+  if (!socioB && !compFileB) {
+    showToast('Seleccione o suba la segunda imagen (Foto 2)', 'warning');
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('tolerancia', tolerancia);
+
+  if (compFileA) formData.append('foto_a', compFileA);
+  else formData.append('socio_a', socioA);
+
+  if (compFileB) formData.append('foto_b', compFileB);
+  else formData.append('socio_b', socioB);
+
+  showToast('Procesando vectores faciales de 128D...', 'info');
+
+  try {
+    const res = await fetch(API.comparar, {
+      method: 'POST',
+      body: formData
+    });
+    const d = await res.json();
+
+    if (!res.ok) {
+      showToast(d.error || 'Error en la comparación biométrica', 'error');
+      return;
+    }
+
+    // Actualizar previsualizaciones con recuadros devueltos
+    if (d.foto_a_b64) document.getElementById('comp-preview-a').src = d.foto_a_b64;
+    if (d.foto_b_b64) document.getElementById('comp-preview-b').src = d.foto_b_b64;
+
+    // Mostrar Veredicto
+    const box = document.getElementById('comp-resultado-box');
+    const card = document.getElementById('comp-verdict-card');
+    const title = document.getElementById('comp-verdict-title');
+    const detail = document.getElementById('comp-verdict-detail');
+
+    if (box) box.style.display = 'block';
+    if (card) card.className = `verdict-card ${d.decision}`;
+    if (title) title.textContent = `${d.resultado} (Distancia: ${d.distancia.toFixed(4)})`;
+    if (detail) detail.textContent = d.explicacion;
+
+    showToast(`Comparación finalizada: Distancia ${d.distancia.toFixed(4)}`, d.coincide ? 'success' : 'warning');
+
+  } catch (err) {
+    console.error(err);
+    showToast('Error al conectar con el servidor', 'error');
   }
 }
 
@@ -826,6 +1149,9 @@ function setupEventListeners() {
   // Formulario alta socio
   document.getElementById('form-alta-socio')?.addEventListener('submit', registrarNuevoSocio);
 
+  // Formulario nueva reserva (HU-09)
+  document.getElementById('form-crear-reserva')?.addEventListener('submit', registrarNuevaReserva);
+
   // Simulación de foto drag & drop o input
   const dropZone = document.getElementById('kiosk-drop-zone');
   const fileInput = document.getElementById('kiosk-file-input');
@@ -838,7 +1164,7 @@ function setupEventListeners() {
   }
 
   // Sandbox inputs
-  ['sandbox-socio-select', 'sandbox-hora', 'sandbox-aforo', 'sandbox-horas-usadas', 'sandbox-activo'].forEach(id => {
+  ['sandbox-socio-select', 'sandbox-hora', 'sandbox-aforo', 'sandbox-horas-usadas', 'sandbox-activo', 'sandbox-reserva'].forEach(id => {
     document.getElementById(id)?.addEventListener('input', evaluarReglasSandbox);
     document.getElementById(id)?.addEventListener('change', evaluarReglasSandbox);
   });

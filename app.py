@@ -3,6 +3,7 @@ Servidor web y API REST para el Sistema de Coworking Facial.
 Conecta la base de datos, el motor de reglas y el reconocimiento facial
 con un panel de control interactivo y kiosco de acceso visual.
 """
+import base64
 import io
 import os
 import time
@@ -10,6 +11,10 @@ from datetime import datetime
 import cv2
 import numpy as np
 from flask import Flask, render_template, jsonify, request, send_from_directory, Response, send_file
+try:
+    import face_recognition as fr
+except ImportError:
+    fr = None
 
 import config
 import base_datos as bd
@@ -287,39 +292,42 @@ def api_simular_acceso():
     datos = request.get_json(silent=True) or {}
     nombre = datos.get("nombre")
 
+    fotograma = None
+    ubicacion = None
+
     # Si se sube una imagen para simular escaneo facial
     if "foto" in request.files:
         archivo = request.files["foto"]
-        import cv2
-        import numpy as np
         img_bytes = archivo.read()
         nparr = np.frombuffer(img_bytes, np.uint8)
         fotograma = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         
-        caras = rec.buscar_rostros(fotograma)
+        caras = rec.buscar_rostros(fotograma) if fotograma is not None else []
         if not caras:
-            bd.registrar_intento(None, "Cara no reconocida")
+            foto_ruta = control_acceso._guardar_foto_intento(fotograma, (0, fotograma.shape[1], fotograma.shape[0], 0)) if fotograma is not None else None
+            bd.registrar_intento(None, "Cara no reconocida", foto_ruta)
             return jsonify({
                 "decision": reglas.RECHAZADO,
                 "nombre": "Desconocido",
                 "tipo_movimiento": "DENEGADO",
                 "etiqueta": "ACCESO DENEGADO",
                 "motivo": "No se detectó ningún rostro reconocible",
-                "foto_intento": None
+                "foto_intento": foto_ruta
             })
         
         ubicacion, cod = caras[0]
         nombres_db, cods_db = rec.cargar_base()
         nombre_id, dist = rec.identificar(cod, nombres_db, cods_db)
         if not nombre_id:
-            bd.registrar_intento(None, "Persona desconocida (no registrada)")
+            foto_ruta = control_acceso._guardar_foto_intento(fotograma, ubicacion)
+            bd.registrar_intento(None, f"Persona desconocida (distancia: {dist:.2f})", foto_ruta)
             return jsonify({
                 "decision": reglas.RECHAZADO,
                 "nombre": "Desconocido",
                 "tipo_movimiento": "DENEGADO",
                 "etiqueta": "DESCONOCIDO",
-                "motivo": "Rostro no registrado en el padrón de socios",
-                "foto_intento": None
+                "motivo": f"Rostro no registrado en el padrón (distancia {dist:.2f})",
+                "foto_intento": foto_ruta
             })
         nombre = nombre_id
 
@@ -367,14 +375,15 @@ def api_simular_acceso():
     analisis = reglas.evaluar_acceso(socio, bd.cantidad_adentro(), bd.reserva_de_hoy(socio["id"]))
 
     if analisis["decision"] == reglas.RECHAZADO:
-        bd.registrar_intento(nombre, analisis["motivo"])
+        foto_ruta = control_acceso._guardar_foto_intento(fotograma, ubicacion) if (fotograma is not None and ubicacion is not None) else None
+        bd.registrar_intento(nombre, analisis["motivo"], foto_ruta)
         return jsonify({
             "decision": reglas.RECHAZADO,
             "tipo_movimiento": "DENEGADO",
             "nombre": nombre,
             "etiqueta": f"RECHAZADO {nombre}",
             "motivo": analisis["motivo"],
-            "regla_violada": analisis.get("regla"),
+            "regla_violada": analisis["reglas"][0] if analisis.get("reglas") else None,
             "socio_id": socio["id"]
         })
 
@@ -561,13 +570,15 @@ def api_intentos():
 # ==========================================================
 @app.route("/api/reglas")
 def api_reglas():
-    """Listado de reglas de la base de conocimiento con metadatos."""
+    """Listado de reglas de la base de conocimiento con metadatos (RN-01 a RN-09)."""
     lista = []
     for r in reglas.BASE_CONOCIMIENTO:
         lista.append({
             "codigo": r["codigo"],
+            "identificador": r.get("identificador", r["codigo"]),
             "descripcion": r["descripcion"],
-            "decision": r["decision"]
+            "decision": r["decision"],
+            "historia": r.get("historia", "")
         })
     return jsonify(lista)
 
@@ -576,7 +587,7 @@ def api_reglas():
 def api_evaluar_reglas():
     """
     Sandbox interactivo: Evalúa qué reglas se disparan para un socio
-    según parámetros hipotéticos (hora, aforo, horas consumidas).
+    según parámetros hipotéticos (hora, aforo, horas consumidas, reserva).
     Ideal para demostración y evaluación académica del TP.
     """
     datos = request.get_json(silent=True) or {}
@@ -599,11 +610,24 @@ def api_evaluar_reglas():
     if "vence" in datos and datos["vence"]:
         socio_simulado["vence"] = datos["vence"]
 
+    # Reserva para probar RN-09 (HU-09)
+    reserva_simulada = None
+    if datos.get("tiene_reserva"):
+        reserva_simulada = {
+            "sala": datos.get("reserva_sala", "Sala de reuniones 1"),
+            "hora_desde": datos.get("reserva_desde", "15:00"),
+            "hora_hasta": datos.get("reserva_hasta", "16:30")
+        }
+    else:
+        reserva_real = bd.reserva_de_hoy(socio["id"])
+        if reserva_real:
+            reserva_simulada = dict(reserva_real)
+
     ahora_simulado = datetime.now().replace(hour=hora_simulada, minute=0, second=0)
     ctx = {
         "ahora": ahora_simulado,
         "adentro": aforo_simulado,
-        "reserva": None,
+        "reserva": reserva_simulada,
     }
 
     evaluaciones = []
@@ -616,8 +640,10 @@ def api_evaluar_reglas():
         
         evaluaciones.append({
             "codigo": r["codigo"],
+            "identificador": r.get("identificador", r["codigo"]),
             "descripcion": r["descripcion"],
             "decision": r["decision"],
+            "historia": r.get("historia", ""),
             "se_cumple": bool(se_cumple),
             "mensaje": mensaje
         })
@@ -637,8 +663,137 @@ def api_evaluar_reglas():
         "parametros": {
             "hora": hora_simulada,
             "aforo": aforo_simulado,
-            "horas_usadas": horas_usadas_simuladas
+            "horas_usadas": horas_usadas_simuladas,
+            "tiene_reserva": bool(reserva_simulada)
         }
+    })
+
+
+# ==========================================================
+# API: GESTIÓN DE RESERVAS (HU-09 / RN-09)
+# ==========================================================
+@app.route("/api/reservas", methods=["GET", "POST"])
+def api_reservas():
+    """Gestión y consulta de reservas de sala de reuniones."""
+    if request.method == "POST":
+        datos = request.get_json(silent=True) or request.form
+        socio_id = datos.get("socio_id")
+        sala = datos.get("sala", "Sala de reuniones 1")
+        fecha = datos.get("fecha", datetime.now().strftime("%Y-%m-%d"))
+        hora_desde = datos.get("hora_desde", "15:00")
+        hora_hasta = datos.get("hora_hasta", "16:30")
+
+        if not socio_id:
+            return jsonify({"error": "socio_id es requerido"}), 400
+
+        res_id = bd.crear_reserva(socio_id, sala, fecha, hora_desde, hora_hasta)
+        return jsonify({"mensaje": "Reserva creada exitosamente", "id": res_id})
+
+    hoy = datetime.now().strftime("%Y-%m-%d")
+    with bd.conectar() as con:
+        filas = con.execute("""
+            SELECT r.*, s.nombre as socio_nombre, s.plan
+            FROM reservas r
+            JOIN socios s ON s.id = r.socio_id
+            WHERE r.fecha >= ?
+            ORDER BY r.fecha, r.hora_desde
+        """, (hoy,)).fetchall()
+    return jsonify([dict(f) for f in filas])
+
+
+# ==========================================================
+# API: COMPARACIÓN DE DOS ROSTROS (CU-07)
+# ==========================================================
+@app.route("/api/comparar", methods=["POST"])
+def api_comparar():
+    """
+    CU-07: Comparar dos rostros y ajustar tolerancia.
+    Carga dos imágenes, localiza y codifica los rostros, y evalúa
+    la distancia euclidiana respecto a la tolerancia configurada.
+    """
+    tolerancia = float(request.form.get("tolerancia", config.TOLERANCIA))
+    
+    # Procesar Foto A
+    bgr_a = None
+    if "foto_a" in request.files and request.files["foto_a"].filename:
+        arr_a = np.frombuffer(request.files["foto_a"].read(), np.uint8)
+        bgr_a = cv2.imdecode(arr_a, cv2.IMREAD_COLOR)
+    elif request.form.get("socio_a"):
+        nom = request.form.get("socio_a")
+        ruta = os.path.join(config.CARPETA_SOCIOS, f"{nom}.jpg")
+        if os.path.exists(ruta):
+            bgr_a = cv2.imread(ruta)
+
+    # Procesar Foto B
+    bgr_b = None
+    if "foto_b" in request.files and request.files["foto_b"].filename:
+        arr_b = np.frombuffer(request.files["foto_b"].read(), np.uint8)
+        bgr_b = cv2.imdecode(arr_b, cv2.IMREAD_COLOR)
+    elif request.form.get("socio_b"):
+        nom = request.form.get("socio_b")
+        ruta = os.path.join(config.CARPETA_SOCIOS, f"{nom}.jpg")
+        if os.path.exists(ruta):
+            bgr_b = cv2.imread(ruta)
+
+    if bgr_a is None:
+        return jsonify({"error": "Debe proporcionar la primera imagen (Foto 1)"}), 400
+    if bgr_b is None:
+        return jsonify({"error": "Debe proporcionar la segunda imagen (Foto 2)"}), 400
+
+    caras_a = rec.buscar_rostros(bgr_a)
+    caras_b = rec.buscar_rostros(bgr_b)
+
+    if not caras_a:
+        return jsonify({
+            "error": "No se detectó ningún rostro en la Foto 1 (Flujo alternativo 2a de CU-07)",
+            "falta_en": "foto_a"
+        }), 422
+
+    if not caras_b:
+        return jsonify({
+            "error": "No se detectó ningún rostro en la Foto 2 (Flujo alternativo 2a de CU-07)",
+            "falta_en": "foto_b"
+        }), 422
+
+    ubicacion_a, cara_a = caras_a[0]
+    ubicacion_b, cara_b = caras_b[0]
+
+    if fr is not None:
+        distancia = float(fr.face_distance([cara_a], cara_b)[0])
+    else:
+        # Fallback de distancia para vectores extraídos con OpenCV
+        distancia = float(0.5 * np.linalg.norm(np.array(cara_a) - np.array(cara_b)))
+
+    coincide = distancia <= tolerancia
+
+    color = config.COLOR_HABILITADO if coincide else config.COLOR_RECHAZADO
+
+    # Dibujar recuadros en ambas imágenes
+    top, right, bottom, left = ubicacion_a
+    cv2.rectangle(bgr_a, (left, top), (right, bottom), color, 3)
+
+    top, right, bottom, left = ubicacion_b
+    cv2.rectangle(bgr_b, (left, top), (right, bottom), color, 3)
+
+    _, buf_a = cv2.imencode(".jpg", bgr_a)
+    _, buf_b = cv2.imencode(".jpg", bgr_b)
+
+    b64_a = "data:image/jpeg;base64," + base64.b64encode(buf_a).decode("utf-8")
+    b64_b = "data:image/jpeg;base64," + base64.b64encode(buf_b).decode("utf-8")
+
+    return jsonify({
+        "coincide": coincide,
+        "distancia": round(distancia, 4),
+        "tolerancia": tolerancia,
+        "resultado": "ES LA MISMA PERSONA" if coincide else "SON PERSONAS DISTINTAS",
+        "decision": reglas.HABILITADO if coincide else reglas.RECHAZADO,
+        "foto_a_b64": b64_a,
+        "foto_b_b64": b64_b,
+        "explicacion": (
+            f"Distancia euclidiana de vectores: {distancia:.4f} frente al umbral {tolerancia:.2f}. "
+            f"Dado que la distancia es {'menor o igual' if coincide else 'mayor'} que la tolerancia, "
+            f"el sistema clasifica que {'CORRESPONDEN AL MISMO INDIVIDUO' if coincide else 'CORRESPONDEN A INDIVIDUOS DIFERENTES'}."
+        )
     })
 
 

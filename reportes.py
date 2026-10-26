@@ -3,7 +3,14 @@ Reportes del sistema: consumo por socio, facturación estimada,
 ocupación por franja horaria e historial de accesos rechazados.
 Todos se pueden exportar a CSV.
 """
+import sys
 from datetime import datetime
+
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
 
 import base_datos as bd
 import config
@@ -107,8 +114,14 @@ def ocupacion_por_hora(mes=None, exportar=False):
     print(f"\n{_linea()}")
     print(f"  OCUPACIÓN POR FRANJA HORARIA - {mes}")
     print(_linea())
+    simbolo = "█"
+    try:
+        simbolo.encode(sys.stdout.encoding or "utf-8")
+    except Exception:
+        simbolo = "#"
+
     for h, cantidad in conteo.items():
-        barra = "█" * int(cantidad / maximo * 42)
+        barra = simbolo * int(cantidad / maximo * 42)
         print(f"  {h:02d}:00  {barra:<42} {cantidad}")
     pico = max(conteo, key=conteo.get)
     print(f"\n  Hora pico: {pico:02d}:00 con {conteo[pico]} sesiones activas\n")

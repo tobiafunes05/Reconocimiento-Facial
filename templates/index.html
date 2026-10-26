@@ -80,6 +80,16 @@
         <span>Alta de Socio</span>
       </a>
 
+      <a class="nav-item" data-view="reservas">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="3" y1="10" x2="21" y2="10"></line>
+        </svg>
+        <span>Reservas de Sala (HU-09)</span>
+      </a>
+
       <div class="nav-section-title">Finanzas y Analítica</div>
 
       <a class="nav-item" data-view="consumo">
@@ -107,6 +117,15 @@
           <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
         </svg>
         <span>Motor de Reglas (IA)</span>
+      </a>
+
+      <a class="nav-item" data-view="comparador">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="9" cy="9" r="4"></circle>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>
+        <span>Comparador Facial (CU-07)</span>
       </a>
     </nav>
 
@@ -290,6 +309,36 @@
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reservas del Día (HU-09) -->
+        <div class="panel-card" style="margin-top: 24px;">
+          <div class="panel-card-header">
+            <div class="panel-title-group">
+              <h3 class="panel-card-title">Reservas de Sala para Hoy (HU-09 / RN-09)</h3>
+              <span class="status-badge vigente" id="dashboard-reservas-count">0 programadas</span>
+            </div>
+            <button class="btn-secondary" style="font-size: 0.78rem; padding: 6px 12px;" onclick="switchView('reservas')">
+              Gestionar Reservas
+            </button>
+          </div>
+          <div class="panel-card-body" style="padding: 0;">
+            <div class="table-container">
+              <table class="styled-table">
+                <thead>
+                  <tr>
+                    <th>Socio</th>
+                    <th>Sala Reservada</th>
+                    <th>Horario</th>
+                    <th>Recordatorio Facial</th>
+                  </tr>
+                </thead>
+                <tbody id="dashboard-reservas-tbody">
+                  <!-- Dinámico -->
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -644,16 +693,17 @@
             </div>
           </div>
 
-          <!-- Auditoría de Rechazos -->
+          <!-- Auditoría de Rechazos (HU-11 / CU-06) -->
           <div class="panel-card">
             <div class="panel-card-header">
-              <h3 class="panel-card-title">Intentos Denegados</h3>
-              <span class="status-badge vencido">Auditoría</span>
+              <h3 class="panel-card-title">Intentos Denegados (HU-11 / CU-06)</h3>
+              <span class="status-badge vencido">Auditoría Visual</span>
             </div>
             <div class="panel-card-body" style="padding: 0; max-height: 400px; overflow-y: auto;">
               <table class="styled-table">
                 <thead>
                   <tr>
+                    <th style="width: 52px;">Rostro</th>
                     <th>Fecha/Hora</th>
                     <th>Persona</th>
                     <th>Motivo</th>
@@ -725,6 +775,11 @@
                 <label for="sandbox-activo" style="font-size: 0.85rem; font-weight: 600; cursor: pointer;">Membresía activa en base de datos</label>
               </div>
 
+              <div class="form-group" style="display: flex; align-items: center; gap: 10px;">
+                <input type="checkbox" id="sandbox-reserva" style="width: 18px; height: 18px; accent-color: var(--primary);">
+                <label for="sandbox-reserva" style="font-size: 0.85rem; font-weight: 600; cursor: pointer;">Tiene reserva de sala para hoy (RN-09 / HU-09)</label>
+              </div>
+
               <!-- Tarjeta de Resolución -->
               <div id="sandbox-resolucion-card" class="verdict-card HABILITADO" style="margin-top: 24px; padding: 14px;">
                 <div style="flex-grow: 1;">
@@ -738,7 +793,7 @@
           <!-- Base de Reglas Activas -->
           <div class="panel-card">
             <div class="panel-card-header">
-              <h3 class="panel-card-title">Reglas de la Base de Conocimiento</h3>
+              <h3 class="panel-card-title">Reglas de la Base de Conocimiento (RN-01 a RN-09)</h3>
             </div>
             <div class="panel-card-body" id="reglas-lista-container">
               <!-- Dinámico -->
@@ -747,7 +802,201 @@
         </div>
       </section>
 
+      <!-- ======================================================
+           VISTA 8: RESERVAS DE SALAS (HU-09 / RN-09)
+           ====================================================== -->
+      <section id="view-reservas" class="view-section">
+        <div style="display: grid; grid-template-columns: 1fr 1.6fr; gap: 28px;">
+          <!-- Formulario Nueva Reserva -->
+          <div class="panel-card">
+            <div class="panel-card-header">
+              <h3 class="panel-card-title">Nueva Reserva de Sala (HU-09)</h3>
+            </div>
+            <div class="panel-card-body">
+              <form id="form-crear-reserva">
+                <div class="form-group">
+                  <label class="form-label">Socio Solicitante</label>
+                  <select id="reserva-socio-select" class="form-select" required></select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Sala de Reuniones</label>
+                  <select id="reserva-sala-select" class="form-select" required>
+                    <option value="Sala de reuniones 1">Sala de reuniones 1 (Capacidad 8)</option>
+                    <option value="Sala de reuniones 2">Sala de reuniones 2 (Capacidad 4)</option>
+                    <option value="Cabina acústica A">Cabina acústica A (Individual)</option>
+                    <option value="Auditorio Central">Auditorio Central (Capacidad 25)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Fecha de la Reserva</label>
+                  <input type="date" id="reserva-fecha" class="form-input" required>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                  <div class="form-group">
+                    <label class="form-label">Hora Desde</label>
+                    <input type="time" id="reserva-desde" class="form-input" value="15:00" required>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Hora Hasta</label>
+                    <input type="time" id="reserva-hasta" class="form-input" value="16:30" required>
+                  </div>
+                </div>
+                <div style="margin-top: 18px;">
+                  <button type="submit" class="btn-primary" style="width: 100%; justify-content: center;">
+                    Registrar Reserva de Sala
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- Listado de Reservas Programadas -->
+          <div class="panel-card">
+            <div class="panel-card-header">
+              <div class="panel-title-group">
+                <h3 class="panel-card-title">Reservas Activas y Próximas</h3>
+                <span class="status-badge vigente">Recordatorio en Acceso</span>
+              </div>
+            </div>
+            <div class="panel-card-body" style="padding: 0;">
+              <div class="table-container">
+                <table class="styled-table">
+                  <thead>
+                    <tr>
+                      <th>Socio</th>
+                      <th>Sala</th>
+                      <th>Fecha</th>
+                      <th>Horario</th>
+                      <th>Regla HU-09</th>
+                    </tr>
+                  </thead>
+                  <tbody id="reservas-tbody">
+                    <!-- Dinámico -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================================================
+           VISTA 9: COMPARADOR FACIAL BIOMÉTRICO (CU-07)
+           ====================================================== -->
+      <section id="view-comparador" class="view-section">
+        <div style="margin-bottom: 24px;">
+          <h2 style="font-size: 1.3rem; font-weight: 800; color: #fff;">CU-07: Verificación Biométrica y Calibración de Tolerancia</h2>
+          <p style="color: var(--text-muted); font-size: 0.88rem; margin-top: 4px;">
+            Compara dos imágenes analizando sus vectores faciales de 128 dimensiones. Permite calibrar la tolerancia con evidencia empírica (misma persona ≈ 0.41, personas distintas ≈ 0.81).
+          </p>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+          <!-- Foto 1 -->
+          <div class="panel-card">
+            <div class="panel-card-header">
+              <h3 class="panel-card-title">Foto Control (Muestra 1)</h3>
+            </div>
+            <div class="panel-card-body">
+              <div class="form-group">
+                <label class="form-label">Seleccionar Socio del Padrón</label>
+                <select id="comp-socio-a" class="form-select" onchange="previewComparadorSocio('a', this.value)">
+                  <option value="">-- O subir archivo abajo --</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">O cargar archivo de imagen</label>
+                <input type="file" id="comp-file-a" class="form-input" accept="image/*" onchange="previewComparadorFile('a', this)">
+              </div>
+              <div style="width: 100%; aspect-ratio: 4/3; background: #000; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: center; overflow: hidden; margin-top: 14px;">
+                <img id="comp-preview-a" style="width: 100%; height: 100%; object-fit: contain; display: none;">
+                <span id="comp-empty-a" style="color: var(--text-dim); font-size: 0.85rem;">Sin imagen seleccionada</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Foto 2 -->
+          <div class="panel-card">
+            <div class="panel-card-header">
+              <h3 class="panel-card-title">Foto Prueba (Muestra 2)</h3>
+            </div>
+            <div class="panel-card-body">
+              <div class="form-group">
+                <label class="form-label">Seleccionar Socio del Padrón</label>
+                <select id="comp-socio-b" class="form-select" onchange="previewComparadorSocio('b', this.value)">
+                  <option value="">-- O subir archivo abajo --</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">O cargar archivo de imagen</label>
+                <input type="file" id="comp-file-b" class="form-input" accept="image/*" onchange="previewComparadorFile('b', this)">
+              </div>
+              <div style="width: 100%; aspect-ratio: 4/3; background: #000; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: center; overflow: hidden; margin-top: 14px;">
+                <img id="comp-preview-b" style="width: 100%; height: 100%; object-fit: contain; display: none;">
+                <span id="comp-empty-b" style="color: var(--text-dim); font-size: 0.85rem;">Sin imagen seleccionada</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel de Control y Tolerancia -->
+        <div class="panel-card" style="margin-bottom: 24px;">
+          <div class="panel-card-body">
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; align-items: center;">
+              <div>
+                <label class="form-label">Umbral de Tolerancia Euclidiana (Corte de Decisión)</label>
+                <input type="range" id="comp-tolerancia" min="0.30" max="0.80" step="0.01" value="{{ config.TOLERANCIA }}" style="width: 100%; accent-color: var(--primary);" oninput="document.getElementById('comp-tol-val').textContent = parseFloat(this.value).toFixed(2)">
+                <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-dim); margin-top: 4px;">
+                  <span>0.30 (Muy Estricto)</span>
+                  <span style="font-weight: 700; color: #818cf8;">Tolerancia: <strong id="comp-tol-val">{{ config.TOLERANCIA }}</strong> (Calibración Óptima)</span>
+                  <span>0.80 (Muy Permisivo)</span>
+                </div>
+              </div>
+
+              <div>
+                <button class="btn-primary" style="width: 100%; justify-content: center; padding: 14px;" onclick="ejecutarComparacionBiometrica()">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                  Comparar Rostros (CU-07)
+                </button>
+              </div>
+            </div>
+
+            <!-- Veredicto del CU-07 -->
+            <div id="comp-resultado-box" style="display: none; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-subtle);">
+              <div id="comp-verdict-card" class="verdict-card HABILITADO">
+                <div id="comp-verdict-icon" class="verdict-icon">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                </div>
+                <div style="flex-grow: 1;">
+                  <div id="comp-verdict-title" class="verdict-title">ES LA MISMA PERSONA</div>
+                  <div id="comp-verdict-detail" class="verdict-detail">Distancia euclidiana calculada</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
     </main>
+  </div>
+
+  <!-- Modal Ver Foto de Intento -->
+  <div class="modal-overlay" id="modal-foto-intento">
+    <div class="modal-content" style="max-width: 450px; text-align: center;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-foto-intento-title">Registro Fotográfico del Intento</h3>
+        <button class="modal-close" onclick="cerrarModalFotoIntento()">✕</button>
+      </div>
+      <div class="modal-body">
+        <img id="modal-foto-intento-img" style="width: 100%; max-height: 380px; object-fit: contain; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); background: #000;">
+        <div id="modal-foto-intento-desc" style="margin-top: 12px; font-size: 0.85rem; color: var(--text-muted);"></div>
+      </div>
+    </div>
   </div>
 
   <!-- ==========================================================
