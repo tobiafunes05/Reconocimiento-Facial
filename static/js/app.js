@@ -20,7 +20,8 @@ const API = {
   evaluarReglas: '/api/reglas/evaluar',
   recargarDemo: '/api/demo/recargar',
   reservas: '/api/reservas',
-  comparar: '/api/comparar'
+  comparar: '/api/comparar',
+  camaraCapturar: '/api/camara/capturar'
 };
 
 // Estado global de la aplicación
@@ -61,6 +62,18 @@ function initNavigation() {
 
 function switchView(viewName) {
   AppState.currentView = viewName;
+
+  // Desconectar el streaming de kiosco si no estamos en la vista kiosco
+  const kioskFeed = document.getElementById('kiosk-video-feed');
+  if (viewName !== 'kiosco' && kioskFeed && kioskFeed.getAttribute('src')) {
+    kioskFeed.removeAttribute('src');
+  }
+
+  // Apagar la webcam del navegador si salimos de la vista alta
+  if (viewName !== 'alta' && AppState.webcamStream) {
+    AppState.webcamStream.getTracks().forEach(t => t.stop());
+    AppState.webcamStream = null;
+  }
 
   // Actualizar Sidebar
   document.querySelectorAll('.nav-item').forEach(el => {
@@ -342,6 +355,10 @@ async function ejecutarCheckoutManual(registroId) {
 async function startKioskMode() {
   loadSimulationSelect();
   loadPresentesSummary();
+  const feed = document.getElementById('kiosk-video-feed');
+  if (feed) {
+    feed.src = '/api/video_feed?t=' + Date.now();
+  }
 }
 
 async function loadPresentesSummary() {
@@ -513,6 +530,13 @@ async function startAltaWebcam() {
   const video = document.getElementById('alta-webcam-preview');
   if (!video) return;
 
+  // Si el stream de kiosco estaba activo, liberarlo
+  const kioskFeed = document.getElementById('kiosk-video-feed');
+  if (kioskFeed && kioskFeed.getAttribute('src')) {
+    kioskFeed.removeAttribute('src');
+    await new Promise(r => setTimeout(r, 250));
+  }
+
   try {
     if (AppState.webcamStream) {
       AppState.webcamStream.getTracks().forEach(t => t.stop());
@@ -522,21 +546,38 @@ async function startAltaWebcam() {
     video.srcObject = stream;
     document.getElementById('alta-cam-placeholder')?.style.setProperty('display', 'none');
     video.style.display = 'block';
+
+    const badge = document.getElementById('alta-camera-mode-badge');
+    if (badge) {
+      badge.textContent = 'Webcam Navegador Activa';
+      badge.className = 'status-badge vigente';
+    }
   } catch (err) {
-    console.log('No se pudo acceder a la cámara web en el navegador, se usará subida manual:', err);
+    console.log('No se pudo acceder a la cámara web en el navegador, se habilita cámara del sistema:', err);
+    video.style.display = 'none';
     document.getElementById('alta-cam-placeholder')?.style.setProperty('display', 'flex');
+
+    const badge = document.getElementById('alta-camera-mode-badge');
+    if (badge) {
+      badge.textContent = 'Cámara del Sistema Lista';
+      badge.className = 'status-badge por_vencer';
+    }
   }
 }
 
 function capturarFotoWebcam() {
   const video = document.getElementById('alta-webcam-preview');
+  if (!video || !AppState.webcamStream) {
+    showToast('La webcam del navegador no está activa. Usá "Cámara del Sistema".', 'warning');
+    return;
+  }
   const canvas = document.createElement('canvas');
   canvas.width = 640;
   canvas.height = 480;
   const ctx = canvas.getContext('2d');
   ctx.drawImage(video, 0, 0, 640, 480);
 
-  const b64 = canvas.toDataURL('image/jpeg', 0.9);
+  const b64 = canvas.toDataURL('image/jpeg', 0.92);
   AppState.capturedPhotoBase64 = b64;
 
   const previewImg = document.getElementById('alta-foto-snapshot');
@@ -547,7 +588,55 @@ function capturarFotoWebcam() {
   }
   document.getElementById('btn-retake-photo').style.display = 'inline-flex';
   document.getElementById('btn-capture-photo').style.display = 'none';
+  document.getElementById('btn-capture-system').style.display = 'none';
   showToast('Fotografía capturada con éxito', 'success');
+}
+
+async function capturarFotoSistema() {
+  showToast('Capturando imagen con cámara del sistema (OpenCV)...', 'warning');
+  try {
+    if (AppState.webcamStream) {
+      AppState.webcamStream.getTracks().forEach(t => t.stop());
+      AppState.webcamStream = null;
+    }
+
+    const res = await fetch(API.camaraCapturar);
+    const data = await res.json();
+    if (data.ok && data.foto_b64) {
+      AppState.capturedPhotoBase64 = data.foto_b64;
+
+      const previewImg = document.getElementById('alta-foto-snapshot');
+      const video = document.getElementById('alta-webcam-preview');
+      const placeholder = document.getElementById('alta-cam-placeholder');
+
+      if (previewImg) {
+        previewImg.src = data.foto_b64;
+        previewImg.style.display = 'block';
+      }
+      if (video) video.style.display = 'none';
+      if (placeholder) placeholder.style.display = 'none';
+
+      document.getElementById('btn-retake-photo').style.display = 'inline-flex';
+      document.getElementById('btn-capture-photo').style.display = 'none';
+      document.getElementById('btn-capture-system').style.display = 'none';
+
+      const badge = document.getElementById('alta-camera-mode-badge');
+      if (badge) {
+        badge.textContent = 'Foto Capturada';
+        badge.className = 'status-badge vigente';
+      }
+
+      if (data.rostros_detectados >= 1) {
+        showToast(`Foto capturada (${data.rostros_detectados} rostro detectado)`, 'success');
+      } else {
+        showToast('Foto capturada correctamente. Verificá que tu rostro se aprecie bien centrado.', 'warning');
+      }
+    } else {
+      showToast(data.error || 'No se pudo capturar desde la cámara del sistema', 'error');
+    }
+  } catch (err) {
+    showToast('Error al conectar con la cámara del sistema', 'error');
+  }
 }
 
 function retomarFotoWebcam() {
@@ -555,9 +644,10 @@ function retomarFotoWebcam() {
   const video = document.getElementById('alta-webcam-preview');
   const previewImg = document.getElementById('alta-foto-snapshot');
   if (previewImg) previewImg.style.display = 'none';
-  if (video) video.style.display = 'block';
   document.getElementById('btn-retake-photo').style.display = 'none';
   document.getElementById('btn-capture-photo').style.display = 'inline-flex';
+  document.getElementById('btn-capture-system').style.display = 'inline-flex';
+  startAltaWebcam();
 }
 
 async function registrarNuevoSocio(e) {

@@ -146,10 +146,11 @@ def iniciar(indice_camara=None):
         return
     print(f"{len(nombres)} socios en la base: {', '.join(nombres)}")
 
+    import camara_util
     indice = config.INDICE_CAMARA if indice_camara is None else indice_camara
-    captura = cv2.VideoCapture(indice)
-    if not captura.isOpened():
-        print(f"No se pudo abrir la cámara {indice}. Probá con otro índice: python main.py acceso 1")
+    captura = camara_util.abrir_camara(indice)
+    if captura is None or not captura.isOpened():
+        print(f"No se pudo abrir ninguna cámara disponible (probado índice {indice}). Probá con otro índice: python main.py acceso 1")
         return
 
     print("Control de acceso activo. Presioná Q para salir.")

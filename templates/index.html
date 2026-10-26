@@ -352,7 +352,7 @@
           <!-- Visor Biométrico -->
           <div>
             <div class="kiosk-viewport">
-              <img src="/api/video_feed" class="kiosk-video" alt="Transmisión de Cámara de Acceso">
+              <img id="kiosk-video-feed" class="kiosk-video" alt="Transmisión de Cámara de Acceso">
               
               <!-- HUD Biométrico Superpuesto -->
               <div class="kiosk-hud">
@@ -522,31 +522,47 @@
                   </div>
                 </div>
 
-                <!-- Captura de Foto con Cámara Web -->
+                <!-- Captura de Foto con Cámara Web o Cámara del Sistema -->
                 <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
-                  <label class="form-label" style="align-self: flex-start;">Fotografía Facial del Socio</label>
+                  <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 8px;">
+                    <label class="form-label" style="margin-bottom: 0;">Fotografía Facial del Socio</label>
+                    <span id="alta-camera-mode-badge" class="status-badge vigente" style="font-size: 0.72rem;">Cámara Lista</span>
+                  </div>
                   
                   <div style="width: 100%; aspect-ratio: 4/3; background: #000; border-radius: var(--radius-md); overflow: hidden; position: relative; border: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: center;">
                     <video id="alta-webcam-preview" autoplay playsinline style="width: 100%; height: 100%; object-fit: cover;"></video>
                     <img id="alta-foto-snapshot" style="width: 100%; height: 100%; object-fit: cover; display: none;">
                     
-                    <div id="alta-cam-placeholder" style="display: none; flex-direction: column; align-items: center; color: var(--text-dim); gap: 10px;">
-                      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <div id="alta-cam-placeholder" style="display: none; flex-direction: column; align-items: center; color: var(--text-dim); gap: 12px; padding: 20px; text-align: center;">
+                      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--primary);">
                         <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
                         <circle cx="12" cy="13" r="4"></circle>
                       </svg>
-                      <span>Cámara no detectada en navegador</span>
-                      <span style="font-size: 0.75rem;">Podés usar el botón de subir foto a la izquierda</span>
+                      <div>
+                        <div style="font-weight: 600; color: #fff; margin-bottom: 4px;">Cámara de navegador en espera</div>
+                        <div style="font-size: 0.75rem;">Podés usar la <strong>Cámara del Sistema (OpenCV)</strong> o subir un archivo.</div>
+                      </div>
+                      <button type="button" class="btn-primary" style="font-size: 0.8rem; padding: 6px 14px;" onclick="capturarFotoSistema()">
+                        Tomar Foto con Cámara del Sistema
+                      </button>
                     </div>
                   </div>
 
-                  <div style="display: flex; gap: 10px; margin-top: 14px; width: 100%;">
-                    <button type="button" id="btn-capture-photo" class="btn-secondary" style="flex: 1; justify-content: center;" onclick="capturarFotoWebcam()">
+                  <div style="display: flex; gap: 8px; margin-top: 14px; width: 100%; flex-wrap: wrap;">
+                    <button type="button" id="btn-capture-photo" class="btn-secondary" style="flex: 1; justify-content: center; min-width: 140px;" onclick="capturarFotoWebcam()">
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="10"></circle>
                         <circle cx="12" cy="12" r="3"></circle>
                       </svg>
-                      Capturar Foto
+                      Foto (Webcam)
+                    </button>
+                    <button type="button" id="btn-capture-system" class="btn-primary" style="flex: 1.2; justify-content: center; min-width: 160px;" onclick="capturarFotoSistema()">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                        <line x1="8" y1="21" x2="16" y2="21"></line>
+                        <line x1="12" y1="17" x2="12" y2="21"></line>
+                      </svg>
+                      Cámara del Sistema
                     </button>
                     <button type="button" id="btn-retake-photo" class="btn-secondary" style="flex: 1; justify-content: center; display: none;" onclick="retomarFotoWebcam()">
                       Repetir Foto

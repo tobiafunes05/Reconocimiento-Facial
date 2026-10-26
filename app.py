@@ -870,8 +870,9 @@ def api_exportar_csv(tipo):
 def _generar_frames():
     """Genera stream MJPEG de video con recuadros faciales."""
     import cv2
-    cam = cv2.VideoCapture(config.INDICE_CAMARA)
-    if not cam.isOpened():
+    import camara_util
+    cam = camara_util.abrir_camara(config.INDICE_CAMARA)
+    if cam is None or not cam.isOpened():
         # Generar imagen sintética informativa
         blank = np.zeros((480, 640, 3), dtype=np.uint8)
         cv2.putText(blank, "Camara no disponible", (160, 240),
@@ -887,52 +888,76 @@ def _generar_frames():
     contador = 0
     caras_actuales = []
 
-    while True:
-        exito, frame = cam.read()
-        if not exito:
-            break
+    try:
+        while True:
+            exito, frame = cam.read()
+            if not exito or frame is None:
+                break
 
-        contador += 1
-        # Procesar 1 de cada N fotogramas para rendimiento fluido
-        if contador % config.SALTEAR_FOTOGRAMAS == 0:
-            caras = rec.buscar_rostros(frame)
-            caras_actuales = []
-            for ubicacion, cod in caras:
-                nombre, dist = rec.identificar(cod, nombres_db, cods_db)
-                if nombre:
-                    socio = bd.obtener_socio(nombre)
-                    if socio:
-                        abierto = bd.registro_abierto(socio["id"])
-                        estado = "ADENTRO (Check-out)" if abierto else "AFUERA (Ingreso)"
-                        color = config.COLOR_HABILITADO
+            contador += 1
+            # Procesar 1 de cada N fotogramas para rendimiento fluido
+            if contador % config.SALTEAR_FOTOGRAMAS == 0:
+                caras = rec.buscar_rostros(frame)
+                caras_actuales = []
+                for ubicacion, cod in caras:
+                    nombre, dist = rec.identificar(cod, nombres_db, cods_db)
+                    if nombre:
+                        socio = bd.obtener_socio(nombre)
+                        if socio:
+                            abierto = bd.registro_abierto(socio["id"])
+                            estado = "ADENTRO (Check-out)" if abierto else "AFUERA (Ingreso)"
+                            color = config.COLOR_HABILITADO
+                        else:
+                            estado = "No registrado"
+                            color = config.COLOR_RECHAZADO
+                        caras_actuales.append((ubicacion, nombre, color, estado))
                     else:
-                        estado = "No registrado"
-                        color = config.COLOR_RECHAZADO
-                    caras_actuales.append((ubicacion, nombre, color, estado))
-                else:
-                    caras_actuales.append((ubicacion, "DESCONOCIDO", config.COLOR_DESCONOCIDO, "No reconocido"))
+                        caras_actuales.append((ubicacion, "DESCONOCIDO", config.COLOR_DESCONOCIDO, "No reconocido"))
 
-        # Dibujar recuadros
-        for ubicacion, etiqueta, color, sub in caras_actuales:
-            rec.dibujar_rostro(frame, ubicacion, etiqueta, color, sub)
+            # Dibujar recuadros
+            for ubicacion, etiqueta, color, sub in caras_actuales:
+                rec.dibujar_rostro(frame, ubicacion, etiqueta, color, sub)
 
-        # Franja superior
-        cv2.rectangle(frame, (0, 0), (frame.shape[1], 36), (20, 20, 24), cv2.FILLED)
-        cv2.putText(frame, f"{config.NOMBRE_ESPACIO} | Aforo: {bd.cantidad_adentro()}/{config.AFORO_MAXIMO}",
-                    (12, 24), cv2.FONT_HERSHEY_DUPLEX, 0.55, (255, 255, 255), 1)
+            # Franja superior
+            cv2.rectangle(frame, (0, 0), (frame.shape[1], 36), (20, 20, 24), cv2.FILLED)
+            cv2.putText(frame, f"{config.NOMBRE_ESPACIO} | Aforo: {bd.cantidad_adentro()}/{config.AFORO_MAXIMO}",
+                        (12, 24), cv2.FONT_HERSHEY_DUPLEX, 0.55, (255, 255, 255), 1)
 
-        ret, buffer = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
-        frame_bytes = buffer.tobytes()
-        yield (b"--frame\r\n"
-               b"Content-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n")
-
-    cam.release()
+            ret, buffer = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+            frame_bytes = buffer.tobytes()
+            yield (b"--frame\r\n"
+                   b"Content-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n")
+    finally:
+        if cam is not None:
+            cam.release()
 
 
 @app.route("/api/video_feed")
 def video_feed():
     """Ruta para transmitir video MJPEG en tiempo real a la interfaz web."""
     return Response(_generar_frames(), mimetype="multipart/x-mixed-replace; boundary=frame")
+
+
+@app.route("/api/camara/capturar", methods=["GET", "POST"])
+def api_camara_capturar():
+    """Captura una fotografía directamente desde la cámara del sistema (OpenCV)."""
+    import camara_util
+    exito, frame = camara_util.capturar_fotograma_directo(config.INDICE_CAMARA)
+    if not exito or frame is None:
+        return jsonify({
+            "ok": False,
+            "error": "No se pudo acceder a la cámara del sistema. Verificá que no esté ocupada por otra app."
+        }), 500
+
+    caras = rec.buscar_rostros(frame)
+    _, buffer = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 92])
+    b64 = "data:image/jpeg;base64," + base64.b64encode(buffer).decode("utf-8")
+
+    return jsonify({
+        "ok": True,
+        "foto_b64": b64,
+        "rostros_detectados": len(caras)
+    })
 
 
 if __name__ == "__main__":
